@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日本語オンラインコンパス</title>
+<style>
+  /* 全体のレイアウト設定 */
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f4f8;
+    font-family: sans-serif;
+  }
+  
+  /* コンパスの丸い盤面 */
+  #compass {
+    width: 250px;
+    height: 250px;
+    background-color: #ffffff;
+    border: 8px solid #333333;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    /* 針の動きをなめらかにする */
+    transition: transform 0.1s ease-out; 
+  }
+  
+  /* 方角の文字の共通設定 */
+  .direction {
+    position: absolute;
+    font-weight: bold;
+    font-size: 24px;
+    color: #333333;
+  }
+
+  /* 北（上・赤色） */
+  .north {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: red; /* 北だけ目立つように赤色！ */
+  }
+
+  /* 南（下） */
+  .south {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* 東（右） */
+  .east {
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+  }
+
+  /* 西（左） */
+  .west {
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+  }
+
+  /* 角度を表示するテキスト */
+  #heading-text {
+    margin-top: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+  }
+
+  /* 起動ボタン */
+  #start-btn {
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,123,255,0.3);
+    margin-bottom: 30px;
+  }
+  #start-btn:active {
+    transform: scale(0.98);
+  }
+</style>
+</head>
+<body>
+
+<button id="start-btn">コンパスを起動する</button>
+
+<div id="compass">
+  <div class="direction north">北</div>
+  <div class="direction south">南</div>
+  <div class="direction east">東</div>
+  <div class="direction west">西</div>
+</div>
+
+<div id="heading-text">方角: ---°</div>
+
+<script>
+  const startBtn = document.getElementById('start-btn');
+  const compass = document.getElementById('compass');
+  const headingText = document.getElementById('heading-text');
+
+  startBtn.addEventListener('click', () => {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+            startBtn.style.display = 'none'; 
+          } else {
+            alert('センサーの利用が許可されませんでした。');
+          }
+        })
+        .catch(console.error);
+    } else {
+      window.addEventListener('deviceorientationabsolute', handleOrientation);
+      window.addEventListener('deviceorientation', handleOrientation);
+      startBtn.style.display = 'none'; 
+    }
+  });
+
+  function handleOrientation(event) {
+    let heading = null;
+
+    if (event.webkitCompassHeading) {
+      heading = event.webkitCompassHeading;
+    } else if (event.absolute !== false && event.alpha !== null) {
+      heading = 360 - event.alpha;
+    }
+
+    if (heading !== null) {
+      compass.style.transform = `rotate(${-heading}deg)`;
+      headingText.innerText = `方角: ${Math.round(heading)}°`;
+    } else {
+      headingText.innerText = '方角を取得できません';
+    }
+  }
+</script>
+
+</body>
+</html>
