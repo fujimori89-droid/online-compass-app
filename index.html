@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>日本語オンラインコンパス</title>
+<title>日本語オンラインコンパス（針だけ動く）</title>
 <style>
   /* 全体のレイアウト設定 */
   body {
@@ -17,62 +17,97 @@
     font-family: sans-serif;
   }
   
-  /* コンパスの丸い盤面 */
+  /* コンパスの丸い盤面（外側の円） */
   #compass {
     width: 250px;
     height: 250px;
     background-color: #ffffff;
-    border: 8px solid #333333;
+    border: 6px solid #333333; /* 太い境界線 */
     border-radius: 50%;
     position: relative;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    /* 針の動きをなめらかにする */
-    transition: transform 0.1s ease-out; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 盤面全体は回転させない */
   }
   
+  /* 内側の円 */
+  .circle-inner {
+    width: 150px;
+    height: 150px;
+    border: 6px solid #333333; /* 太い境界線 */
+    border-radius: 50%;
+    position: absolute;
+  }
+
   /* 方角の文字の共通設定 */
   .direction {
     position: absolute;
     font-weight: bold;
-    font-size: 24px;
+    font-size: 18px; /* フォントサイズ調整 */
     color: #333333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* 北（上・赤色） */
-  .north {
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: red; /* 北だけ目立つように赤色！ */
-  }
+  /* 各方位の位置決め（手動調整） */
+  .north { top: 10px; left: 50%; transform: translateX(-50%); }
+  .east { top: 50%; right: 15px; transform: translateY(-50%); }
+  .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
+  .west { top: 50%; left: 15px; transform: translateY(-50%); }
+  .northeast { top: 30px; right: 30px; }
+  .southeast { bottom: 30px; right: 30px; }
+  .southwest { bottom: 30px; left: 30px; }
+  .northwest { top: 30px; left: 30px; }
 
-  /* 南（下） */
-  .south {
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  /* 東（右） */
-  .east {
+  /* 針のコンテナ */
+  .needle {
+    position: absolute;
     top: 50%;
-    right: 15px;
-    transform: translateY(-50%);
+    left: 50%;
+    /* 針の中央を中心に回転させるための設定 */
+    transform: translate(-50%, -50%) rotate(0deg); 
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 針の動きをなめらかにする */
+    transition: transform 0.1s ease-out; 
+  }
+  
+  /* 中央の点 */
+  .needle-dot {
+    width: 20px;
+    height: 20px;
+    background: #333333;
+    border-radius: 50%;
+    position: absolute;
+    z-index: 10; /* 他の要素より前面に表示 */
   }
 
-  /* 西（左） */
-  .west {
-    top: 50%;
-    left: 15px;
-    transform: translateY(-50%);
+  /* 針の三角形（疑似要素） */
+  .needle::before, .needle::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
   }
 
-  /* 角度を表示するテキスト */
-  #heading-text {
-    margin-top: 30px;
-    font-size: 24px;
-    font-weight: bold;
-    color: #333;
+  /* 西（左）を指す白三角形 */
+  .needle::before {
+    border-right: 60px solid #ffffff; /* 白 */
+    left: 65px; /* 中央からの距離調整 */
+  }
+
+  /* 東（右）を指す赤三角形 */
+  .needle::after {
+    border-left: 60px solid #ff0000; /* 赤 */
+    right: 65px; /* 中央からの距離調整 */
   }
 
   /* 起動ボタン */
@@ -87,6 +122,7 @@
     cursor: pointer;
     box-shadow: 0 4px 6px rgba(0,123,255,0.3);
     margin-bottom: 30px;
+    z-index: 20; /* コンパスより前面に表示 */
   }
   #start-btn:active {
     transform: scale(0.98);
@@ -98,18 +134,24 @@
 <button id="start-btn">コンパスを起動する</button>
 
 <div id="compass">
+  <div class="circle-inner"></div>
   <div class="direction north">北</div>
-  <div class="direction south">南</div>
+  <div class="direction northeast">北東</div>
   <div class="direction east">東</div>
+  <div class="direction southeast">南東</div>
+  <div class="direction south">南</div>
+  <div class="direction southwest">南西</div>
   <div class="direction west">西</div>
+  <div class="direction northwest">北西</div>
+  <div class="needle">
+    <div class="needle-dot"></div>
+  </div>
 </div>
-
-<div id="heading-text">方角: ---°</div>
 
 <script>
   const startBtn = document.getElementById('start-btn');
-  const compass = document.getElementById('compass');
-  const headingText = document.getElementById('heading-text');
+  // 針のコンテナを取得
+  const needle = document.querySelector('.needle'); 
 
   startBtn.addEventListener('click', () => {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -140,10 +182,10 @@
     }
 
     if (heading !== null) {
-      compass.style.transform = `rotate(${-heading}deg)`;
-      headingText.innerText = `方角: ${Math.round(heading)}°`;
+      // 針だけを回転させる。回転角は北（heading）そのもの。
+      needle.style.transform = `translate(-50%, -50%) rotate(${heading}deg)`;
     } else {
-      headingText.innerText = '方角を取得できません';
+      // 方角取得できない場合は何もしない
     }
   }
 </script>
